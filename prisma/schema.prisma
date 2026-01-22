@@ -9,3 +9,30 @@ generator client {
 datasource db {
   provider = "sqlite"
 }
+
+model Track {
+  id              String           @id
+  title           String
+  artist          String
+  album           String
+  duration_seconds Int
+  genre           String
+  cover_url       String?
+  PlaylistTrack   PlaylistTrack[]
+}
+
+model PlaylistTrack {
+  id         String   @id
+  track_id   String
+  position   Float
+  votes      Int      @default(0)
+  added_by   String
+  added_at   DateTime @default(now())
+  is_playing Boolean  @default(false)
+  played_at  DateTime?
+
+  track      Track    @relation(fields: [track_id], references: [id])
+
+  @@unique([track_id])
+  @@index([position])
+}
