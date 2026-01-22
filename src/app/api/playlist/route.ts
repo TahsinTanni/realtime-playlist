@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sseManager } from "@/lib/sse-manager";
 
 export async function GET() {
   const playlist = await prisma.playlistTrack.findMany({
@@ -81,6 +82,9 @@ export async function POST(request: Request) {
       },
       include: { track: true }
     });
+
+    // Broadcast event to all connected clients
+    sseManager.broadcast({ type: 'track.added', item: playlistTrack });
 
     return NextResponse.json(playlistTrack, { status: 201 });
   } catch (e) {

@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sseManager } from "@/lib/sse-manager";
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { id } = params;
   const body = await request.json();
   const { position, is_playing } = body || {};
@@ -10,7 +12,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (typeof is_playing === "boolean") {
     if (is_playing) {
       // Enforce only one is_playing=true
-      [updated] = await prisma.$transaction([
+      const result = await prisma.$transaction([
         prisma.playlistTrack.updateMany({
           where: { is_playing: true },
           data: { is_playing: false },
@@ -26,7 +28,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         }),
       ]);
       // The second result is the updated record
-      updated = arguments[0][1];
+      updated = result[1];
     } else {
       updated = await prisma.playlistTrack.update({
         where: { id },
@@ -48,11 +50,23 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ error: { code: "VALIDATION_ERROR", message: "No valid fields to update" } }, { status: 400 });
   }
 
+  // Broadcast appropriate event
+  if (typeof is_playing === "boolean" && is_playing) {
+    sseManager.broadcast({ type: 'track.playing', id });
+  } else if (typeof position === "number") {
+    sseManager.broadcast({ type: 'track.moved', item: { id, position } });
+  }
+
   return NextResponse.json(updated, { status: 200 });
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { id } = params;
   await prisma.playlistTrack.delete({ where: { id } });
+  
+  // Broadcast event
+  sseManager.broadcast({ type: 'track.removed', id });
+  
   return new NextResponse(null, { status: 204 });
 }

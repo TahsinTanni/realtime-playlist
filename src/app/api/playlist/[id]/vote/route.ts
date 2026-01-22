@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sseManager } from "@/lib/sse-manager";
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const { id } = params;
   const body = await request.json();
   const { direction } = body || {};
@@ -22,6 +24,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
     },
     include: { track: true }
   });
+
+  // Broadcast event
+  sseManager.broadcast({ type: 'track.voted', item: { id, votes: updated.votes } });
 
   return NextResponse.json(updated, { status: 200 });
 }
