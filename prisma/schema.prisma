@@ -1,24 +1,21 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model Track {
-  id              String           @id
-  title           String
-  artist          String
-  album           String
+  id               String         @id
+  title            String
+  artist           String
+  album            String
   duration_seconds Int
-  genre           String
-  cover_url       String?
-  PlaylistTrack   PlaylistTrack[]
+  genre            String
+  cover_url        String?
+  PlaylistTrack    PlaylistTrack[]
 }
 
 model PlaylistTrack {
